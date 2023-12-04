@@ -76,7 +76,7 @@ class ImagerLoader(data.Dataset):
             loader_path = [imgs[imgIdx]['id'][i] for i in range(4)]
             loader_path = os.path.join(*loader_path)
             # path = os.path.join(self.imgPath, self.partition, loader_path, imgs[imgIdx]['id'])
-            path = os.path.join(self.imgPath, loader_path, imgs[imgIdx]['id'])
+            path = os.path.join(self.imgPath, self.partition, loader_path, imgs[imgIdx]['id'])
         else:
             # we randomly pick one non-matching image
             all_idx = range(len(self.ids))
@@ -98,7 +98,7 @@ class ImagerLoader(data.Dataset):
 
             loader_path = [rndimgs[imgIdx]['id'][i] for i in range(4)]
             loader_path = os.path.join(*loader_path)
-            path = os.path.join(self.imgPath, loader_path, rndimgs[imgIdx]['id'])
+            path = os.path.join(self.imgPath, self.partition, loader_path, rndimgs[imgIdx]['id'])
             # path = self.imgPath + rndimgs[imgIdx]['id']
 
         # instructions

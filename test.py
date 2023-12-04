@@ -66,7 +66,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(
         ImagerLoader(opts.img_path,
  	    transforms.Compose([
-            transforms.Scale(256), # rescale the image keeping the original aspect ratio
+            transforms.Resize(256), # rescale the image keeping the original aspect ratio
             transforms.CenterCrop(224), # we get only the center of that rescaled
             transforms.ToTensor(),
             normalize,
@@ -74,6 +74,8 @@ def main():
         batch_size=opts.batch_size, shuffle=False,
         num_workers=opts.workers, pin_memory=True)
     print('Test loader prepared.')
+
+    print(len(test_loader))
 
     # run test
     test(test_loader, model, criterion)
@@ -90,6 +92,7 @@ def test(test_loader, model, criterion):
 
     end = time.time()
     for i, (input, target) in enumerate(test_loader):
+        print(i)
         input_var = list() 
         for j in range(len(input)):
             input_var.append(input[j].to(device))
@@ -133,6 +136,9 @@ def test(test_loader, model, criterion):
             data1 = np.concatenate((data1,output[1].data.cpu().numpy()),axis=0)
             data2 = np.concatenate((data2,target[-2]),axis=0)
             data3 = np.concatenate((data3,target[-1]),axis=0)
+
+        if i == 100:
+            break
 
     if opts.semantic_reg:
         print('* Test cosine loss {losses.avg:.4f}'.format(losses=cos_losses))
