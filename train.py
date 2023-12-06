@@ -209,7 +209,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-
+        if i == opts.batch_num:
+            break
+    
     if opts.semantic_reg:
         print('Epoch: {0}\t'
                   'cos loss {cos_loss.val:.4f} ({cos_loss.avg:.4f})\t'
