@@ -114,7 +114,7 @@ def main():
 
     # run epochs
     for epoch in range(opts.start_epoch, opts.epochs):
-
+        print(epoch)
         # train for one epoch
         train(train_loader, model, criterion, optimizer, epoch)
 
