@@ -185,11 +185,15 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # compute loss
         if opts.semantic_reg:
-            cos_loss = criterion[0](output[0], output[1], target_var[0].float())
+            # COS loss
+            #cos_loss = criterion[0](output[0], output[1], target_var[0].float())
+            cos_loss = criterion[0](output[0], target_var[0].float())
+            cos_loss2 = criterion[0](output[1], target_var[0].float())
             img_loss = criterion[1](output[2], target_var[1])
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
+                    opts.cos_weight * cos_loss2 +\
                     opts.cls_weight * img_loss +\
                     opts.cls_weight * rec_loss 
 
