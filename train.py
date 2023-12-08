@@ -34,7 +34,7 @@ def main():
 
     # define loss function (criterion) and optimizer
     # cosine similarity between embeddings -> input1, input2, target
-    cosine_crit = nn.MSELoss().to(device)
+    cosine_crit = nn.TripletMarginLoss(margin=1.0, p=2, eps=1e-7)
     # cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
     if opts.semantic_reg:
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
