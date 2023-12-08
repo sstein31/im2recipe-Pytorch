@@ -34,7 +34,8 @@ def main():
 
     # define loss function (criterion) and optimizer
     # cosine similarity between embeddings -> input1, input2, target
-    cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
+    cosine_crit = nn.MSEloss().to(device)
+    # cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
     if opts.semantic_reg:
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
         weights_class[0] = 0 # the background class is set to 0, i.e. ignore
