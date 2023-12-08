@@ -34,13 +34,14 @@ def main():
 
     # define loss function (criterion) and optimizer
     # cosine similarity between embeddings -> input1, input2, target
-    cosine_crit = nn.HingeEmbeddingLoss()
-    # cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
+    # cosine_crit = nn.HingeEmbeddingLoss()
+    cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
     if opts.semantic_reg:
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
         weights_class[0] = 0 # the background class is set to 0, i.e. ignore
         # CrossEntropyLoss combines LogSoftMax and NLLLoss in one single class
-        class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
+        class_crit = nn.MSELoss().to(device)
+        # class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
         # we will use two different criteria
         criterion = [cosine_crit, class_crit]
     else:
@@ -186,14 +187,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute loss
         if opts.semantic_reg:
             # COS loss
-            # cos_loss = criterion[0](output[0], output[1], target_var[0].float())
-            cos_loss = criterion[0](output[0], target_var[0].float())
-            cos_loss2 = criterion[0](output[1], target_var[0].float())
+            cos_loss = criterion[0](output[0], output[1], target_var[0].float())
+            # cos_loss = criterion[0](output[0], target_var[0].float())
+            # cos_loss2 = criterion[0](output[1], target_var[0].float())
             img_loss = criterion[1](output[2], target_var[1])
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
-                    opts.cls_weight * cos_loss2 +\
                     opts.cls_weight * img_loss +\
                     opts.cls_weight * rec_loss 
 
