@@ -190,6 +190,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             cos_loss = criterion[0](output[0], output[1], target_var[0].float())
             # cos_loss = criterion[0](output[0], target_var[0].float())
             # cos_loss2 = criterion[0](output[1], target_var[0].float())
+            print(len(output[2]))
+            print(len(target_var[1]))
             img_loss = criterion[1](output[2], target_var[1])
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
