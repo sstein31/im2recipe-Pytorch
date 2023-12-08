@@ -34,7 +34,7 @@ def main():
 
     # define loss function (criterion) and optimizer
     # cosine similarity between embeddings -> input1, input2, target
-    cosine_crit = nn.TripletMarginLoss(margin=1.0, p=2, eps=1e-7)
+    cosine_crit = nn.HingeEmbeddingLoss()
     # cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
     if opts.semantic_reg:
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
@@ -186,13 +186,14 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute loss
         if opts.semantic_reg:
             # COS loss
-            cos_loss = criterion[0](output[0], output[1], target_var[0].float())
-            # cos_loss = criterion[0](output[0], target_var[0].float())
-            # cos_loss2 = criterion[0](output[1], target_var[0].float())
+            # cos_loss = criterion[0](output[0], output[1], target_var[0].float())
+            cos_loss = criterion[0](output[0], target_var[0].float())
+            cos_loss2 = criterion[0](output[1], target_var[0].float())
             img_loss = criterion[1](output[2], target_var[1])
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
+                    opts.cls_weight * cos_loss2 +\
                     opts.cls_weight * img_loss +\
                     opts.cls_weight * rec_loss 
 
