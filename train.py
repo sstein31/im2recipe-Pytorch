@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import random
@@ -15,6 +16,8 @@ from data_loader import ImagerLoader
 from args import get_parser
 from trijoint import im2recipe
 
+from tqdm import tqdm
+
 # =============================================================================
 parser = get_parser()
 opts = parser.parse_args()
@@ -26,6 +29,11 @@ else:
     torch.cuda.manual_seed(opts.seed)
     device = torch.device(*('cuda',0))
 
+# Ensure deterministic between runs (Porter)
+torch.manual_seed(opts.seed)
+random.seed(opts.seed)
+np.random.seed(opts.seed)
+
 def main():
 
     model = im2recipe()
@@ -34,14 +42,12 @@ def main():
 
     # define loss function (criterion) and optimizer
     # cosine similarity between embeddings -> input1, input2, target
-    # cosine_crit = nn.HingeEmbeddingLoss()
     cosine_crit = nn.CosineEmbeddingLoss(0.1).to(device)
     if opts.semantic_reg:
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
         weights_class[0] = 0 # the background class is set to 0, i.e. ignore
         # CrossEntropyLoss combines LogSoftMax and NLLLoss in one single class
-        class_crit = nn.MSELoss().to(device)
-        # class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
+        class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
         # we will use two different criteria
         criterion = [cosine_crit, class_crit]
     else:
@@ -114,14 +120,23 @@ def main():
         num_workers=opts.workers, pin_memory=True)
     print('Validation loader prepared.')
 
+    # Create learning_curves dir
+    timestamp = time.strftime("%m_%d_%H_%M_%S", time.gmtime())
+    learning_curves_file = os.path.join(opts.learning_curves_dir, f'curves_{timestamp}.json')
+    with open(learning_curves_file, 'w') as f:
+        json.dump([], f)
+
     # run epochs
+    total_iters = opts.batch_num * (opts.epochs - opts.start_epoch)
+    pbar = tqdm(total=total_iters, disable=opts.disable_pbar)
     for epoch in range(opts.start_epoch, opts.epochs):
-        print(epoch)
+
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch)
+        train_losses = train(train_loader, model, criterion, optimizer, epoch, pbar)
 
         # evaluate on validation set
-        if (epoch+1) % opts.valfreq == 0 and epoch != 0:
+        val_loss = None
+        if ((epoch+1) % opts.valfreq == 0 and epoch != 0) or epoch+1 == opts.epochs:
             val_loss = validate(val_loader, model, criterion)
         
             # check patience
@@ -150,14 +165,24 @@ def main():
             }, is_best)
 
             print('** Validation: %f (best) - %d (valtrack)' % (best_val, valtrack))
+        
+        losses_to_save = train_losses
+        losses_to_save['val_median_recall'] = val_loss.item() if val_loss else None
+        with open(learning_curves_file, 'r') as f:
+            loaded_losses = json.load(f)
+        with open(learning_curves_file, 'w') as f:
+            loaded_losses.append(losses_to_save)
+            json.dump(loaded_losses, f, indent=4)
 
-def train(train_loader, model, criterion, optimizer, epoch):
+
+def train(train_loader, model, criterion, optimizer, epoch, pbar):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     cos_losses = AverageMeter()
     if opts.semantic_reg:
         img_losses = AverageMeter()
         rec_losses = AverageMeter()
+        combined_losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
 
@@ -186,32 +211,19 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         # compute loss
         if opts.semantic_reg:
-            # COS loss
             cos_loss = criterion[0](output[0], output[1], target_var[0].float())
-            # cos_loss = criterion[0](output[0], target_var[0].float())
-            # cos_loss2 = criterion[0](output[1], target_var[0].float())
-            
-
-
-
-            targ1 = torch.ones(target_var[1].shape).to(device)
-            targ2 = torch.ones(target_var[2].shape).to(device)
-            maximum1 = torch.max(output[2], dim=1)
-            maximum2 = torch.max(output[3], dim=1)
-            
-            # img_loss = criterion[1](output[2], target_var[1])
-            img_loss = criterion[1](maximum1[0], targ1)
-            # rec_loss = criterion[1](output[3], target_var[2])
-            rec_loss = criterion[1](maximum2[0], targ2)
+            img_loss = criterion[1](output[2], target_var[1])
+            rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
                     opts.cls_weight * img_loss +\
                     opts.cls_weight * rec_loss 
-            print(loss)
+
             # measure performance and record losses
             cos_losses.update(cos_loss.data, input[0].size(0))
             img_losses.update(img_loss.data, input[0].size(0))
             rec_losses.update(rec_loss.data, input[0].size(0))
+            combined_losses.update(loss.data, input[0].size(0))
         else:
             loss = criterion(output[0], output[1], target_var[0])
             # measure performance and record loss
@@ -225,7 +237,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        print(i)
+
+        pbar.update(1)
+        pbar.set_description(f'Epoch: {epoch} | Batch: {i}/{opts.batch_num}')
+
         if i == opts.batch_num:
             break
 
@@ -248,6 +263,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
                    epoch, cos_loss=cos_losses, img_loss=img_losses,
                    rec_loss=rec_losses, visionLR=optimizer.param_groups[1]['lr'],
                    recipeLR=optimizer.param_groups[0]['lr']))
+        losses = {
+            'epoch': epoch,
+            'cos_loss': (cos_losses.avg).item(),
+            'img_loss': (img_losses.avg).item(),
+            'rec_loss': (rec_losses.avg).item(),
+            'combined_loss': (combined_losses.avg).item(),
+        }
     else:
         #with open('one_percent_output','a') as f:
          #   f.write('\nEpoch: {0}\t'
@@ -259,7 +281,12 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'vision ({visionLR}) - recipe ({recipeLR})\t'.format(
                    epoch, loss=cos_losses, visionLR=optimizer.param_groups[1]['lr'],
-                   recipeLR=optimizer.param_groups[0]['lr']))                 
+                   recipeLR=optimizer.param_groups[0]['lr']))     
+        losses = {
+            'epoch': epoch,
+            'cos_loss': (cos_losses.avg).item(),
+        }
+    return losses
 
 def validate(val_loader, model, criterion):
     batch_time = AverageMeter()
@@ -381,8 +408,10 @@ def rank(opts, img_embeds, rec_embeds, rec_ids):
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 
     filename = opts.snapshots + 'model_e%03d_v-%.3f.pth.tar' % (state['epoch'],state['best_val']) 
-    if is_best:
-        torch.save(state, filename)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    # Save checkpoint regardless of is_best
+    print(f"Saving checkpoint to {filename}")
+    torch.save(state, filename)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
