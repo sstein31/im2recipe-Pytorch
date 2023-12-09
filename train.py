@@ -197,8 +197,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
             print(target_var[1].shape)
             print(target_var[1])
             targ = torch.ones(target_var[1].shape)
+            print(targ.shape)
             # img_loss = criterion[1](output[2], target_var[1])
-            img_loss = criterion[1](torch.max(output[2], dim=1), tar)
+            img_loss = criterion[1](torch.max(output[2], dim=1), targ)
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
