@@ -190,20 +190,19 @@ def train(train_loader, model, criterion, optimizer, epoch):
             cos_loss = criterion[0](output[0], output[1], target_var[0].float())
             # cos_loss = criterion[0](output[0], target_var[0].float())
             # cos_loss2 = criterion[0](output[1], target_var[0].float())
-            print("OUTPUT")
-            print(output[2].shape)
-            print(output[2])
-            print("TARGET")
-            print(target_var[1].shape)
-            print(target_var[1])
-            targ = torch.ones(target_var[1].shape).to(device)
-            print(targ.shape)
-            maximum = torch.max(output[2], dim=1)
-            print(maximum[0])
-            print(maximum[0].shape)
+            
+
+
+
+            targ1 = torch.ones(target_var[1].shape).to(device)
+            targ2 = torch.ones(target_var[2].shape).to(device)
+            maximum1 = torch.max(output[2], dim=1)
+            maximum2 = torch.max(output[3], dim=1)
+            
             # img_loss = criterion[1](output[2], target_var[1])
-            img_loss = criterion[1](maximum[0], targ)
-            rec_loss = criterion[1](output[3], target_var[2])
+            img_loss = criterion[1](maximum1[0], targ1)
+            # rec_loss = criterion[1](output[3], target_var[2])
+            rec_loss = criterion[1](maximum2[0], targ2)
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
                     opts.cls_weight * img_loss +\
