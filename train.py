@@ -207,7 +207,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             loss =  opts.cos_weight * cos_loss +\
                     opts.cls_weight * img_loss +\
                     opts.cls_weight * rec_loss 
-
+            print(loss)
             # measure performance and record losses
             cos_losses.update(cos_loss.data, input[0].size(0))
             img_losses.update(img_loss.data, input[0].size(0))
