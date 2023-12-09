@@ -47,7 +47,8 @@ def main():
         weights_class = torch.Tensor(opts.numClasses).fill_(1)
         weights_class[0] = 0 # the background class is set to 0, i.e. ignore
         # CrossEntropyLoss combines LogSoftMax and NLLLoss in one single class
-        class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
+        class_crit = nn.MSELoss().to(device)
+        # class_crit = nn.CrossEntropyLoss(weight=weights_class).to(device)
         # we will use two different criteria
         criterion = [cosine_crit, class_crit]
     else:
@@ -212,8 +213,19 @@ def train(train_loader, model, criterion, optimizer, epoch, pbar):
         # compute loss
         if opts.semantic_reg:
             cos_loss = criterion[0](output[0], output[1], target_var[0].float())
-            img_loss = criterion[1](output[2], target_var[1])
-            rec_loss = criterion[1](output[3], target_var[2])
+            
+            targ1 = torch.ones(target_var[1].shape).to(device)
+            targ2 = torch.ones(target_var[2].shape).to(device)
+            maximum1 = torch.max(output[2], dim=1)
+            maximum2 = torch.max(output[3], dim=1)
+            
+            img_loss = criterion[1](maximum1[0], targ1)
+            # rec_loss = criterion[1](output[3], target_var[2])
+            rec_loss = criterion[1](maximum2[0], targ2)
+            # img_loss = criterion[1](output[2], target_var[1])
+            # rec_loss = criterion[1](output[3], target_var[2])
+
+
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
                     opts.cls_weight * img_loss +\
