@@ -215,16 +215,10 @@ def train(train_loader, model, criterion, optimizer, epoch, pbar):
             cos_loss = criterion[0](output[0], output[1], target_var[0].float())
             
             targ1 = torch.ones(target_var[1].shape).to(device)
-            print("TARG1")
-            print(targ1.shape)
-            print(targ1)
-            print()
+            
             
             targ2 = torch.ones(target_var[2].shape).to(device)
             maximum1 = torch.max(output[2], dim=1)
-            print("MAX")
-            print(maximum1[0].shape)
-            print(maximum1[0])
             maximum2 = torch.max(output[3], dim=1)
             
             img_loss = criterion[1](maximum1[0], targ1)
