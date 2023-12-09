@@ -202,7 +202,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             print(maximum[0])
             print(maximum[0].shape)
             # img_loss = criterion[1](output[2], target_var[1])
-            img_loss = criterion[1](maximum, targ)
+            img_loss = criterion[1](maximum[0], targ)
             rec_loss = criterion[1](output[3], target_var[2])
             # combined loss
             loss =  opts.cos_weight * cos_loss +\
