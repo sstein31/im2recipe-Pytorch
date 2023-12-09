@@ -200,7 +200,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             print(targ.shape)
             maximum = torch.max(output[2], dim=1)
             maximum = maximum[0].to(device)
-            print(max[0].shape)
+            print(maximum[0].shape)
             # img_loss = criterion[1](output[2], target_var[1])
             img_loss = criterion[1](maximum, targ)
             rec_loss = criterion[1](output[3], target_var[2])
