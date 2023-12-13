@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 
 def make_train_val_curve(learning_curves_file: str, output_dir='plots/', title=None):
     """Make a learning curve from a learning curve file."""
